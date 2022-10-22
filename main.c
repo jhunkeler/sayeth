@@ -10,6 +10,7 @@
 
 #define INPUT_BUFSIZ 4096
 #define DATA_BUFSIZ 8192
+#define DRIVERS_ALLOC_DEFAULT 128
 
 size_t START_Y = 0;
 const char *A_TAB = "    ";
@@ -87,7 +88,7 @@ int boxprintf(const char *fmt, ...) {
     size_t len = 0;
     char data[INPUT_BUFSIZ] = {0};
     char output[INPUT_BUFSIZ] = {0};
-    vsnprintf(data, sizeof(data) - 1, fmt, list);
+    count = vsnprintf(data, sizeof(data) - 1, fmt, list);
 
     // convert tabs to spaces
     for (size_t i = 0, n = 0; i < strlen(data) && n < sizeof(output); i++, n++) {
@@ -238,8 +239,7 @@ struct Driver *driver_load(char *filename) {
                     fclose(fp);
                     return NULL;
                 }
-                strncpy(driver->data, buf, sizeof(buf));
-                strcat(driver->data, "\n");
+                fseek(fp, (long)-strlen(buf), SEEK_CUR);
                 fread(driver->data + strlen(driver->data), 1, DATA_BUFSIZ - 1, fp);
                 break;
             default:
@@ -251,8 +251,7 @@ struct Driver *driver_load(char *filename) {
 }
 
 struct Driver **drivers = NULL;
-const size_t drivers_alloc_default = 128;
-size_t drivers_alloc = drivers_alloc_default;
+size_t drivers_alloc = DRIVERS_ALLOC_DEFAULT;
 size_t drivers_used = 0;
 
 int driver_register(struct Driver *driver) {
@@ -262,7 +261,7 @@ int driver_register(struct Driver *driver) {
 
     if (drivers_used > drivers_alloc) {
         struct Driver **tmp;
-        drivers_alloc += drivers_alloc_default;
+        drivers_alloc += DRIVERS_ALLOC_DEFAULT;
         tmp = realloc(drivers, (sizeof(**drivers) * drivers_alloc));
         if (!tmp) {
             return -1;
@@ -277,9 +276,10 @@ int driver_register(struct Driver *driver) {
     drivers[drivers_used] = calloc(1, sizeof(*driver));
     memcpy(drivers[drivers_used], driver, sizeof(*driver));
     drivers_used++;
+    return 0;
 }
 
-int driver_run(struct Driver *driver, char *input) {
+void driver_run(struct Driver *driver, char *input) {
     char *elem = driver->box_elements;
     box_top_left = elem[0];
     box_top = elem[1];
@@ -324,7 +324,6 @@ int main(int argc, char *argv[]) {
         driver_dir = strdup("./drivers");
 #endif
     }
-
 
     // set default driver
     strcpy(driver_name, "fierrhea");

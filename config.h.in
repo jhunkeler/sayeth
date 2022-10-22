@@ -1,0 +1,6 @@
+#ifndef SAYETH_CONFIG_H
+#define SAYETH_CONFIG_H
+
+#cmakedefine DRIVER_DIR "@DRIVER_DIR@"
+
+#endif //SAYETH_CONFIG_H

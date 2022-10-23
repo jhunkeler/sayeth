@@ -155,7 +155,7 @@ int boxprintf(const char *fmt, ...) {
 void usage(char *prog) {
     printf("usage: %s [-d driver_name] [-w] [-] {input}\n"
            "-h      Show this help message\n"
-           "-d      Driver name (fierrhea, jenkins, romero)\n"
+           "-d      Driver name (fierrhea, jenkins, romero, doomguy, none)\n"
            "-w      Show indentation whitespace\n"
            "\n"
            "-       Read from standard input\n"

@@ -1,0 +1,17 @@
+# Driver name
+none
+# Box Indent
+4
+# Box elements (top-left, top, top-right, sides, bottom-left, bottom-right)
++-+|+-+
+# Box caret pos (0=above, 1=below)
+1
+# Box caret indent
+0
+# Box caret attached to art (0=no, 1=yes)
+0
+# Box caret
+
+# Data indent
+0
+# Data

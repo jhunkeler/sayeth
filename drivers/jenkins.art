@@ -11,7 +11,9 @@ jenkins
 # Box caret attached to art (0=no, 1=yes)
 0
 # Box caret
-\n|  /\n| /\n|/
+\n|  /\n| /\n|/\n
+# Data indent
+4
 # Data
             ┌╓╓┌
        ▄▄▓▀▀╙└└└▀▀▀▄┌

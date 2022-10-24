@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include "config.h"
 
 #define INPUT_BUFSIZ 4096
@@ -49,13 +50,26 @@ void repchar(char ch, size_t limit) {
 }
 
 size_t get_longest_line(char *s) {
-    size_t lengths[INPUT_BUFSIZ] = {0};
+    size_t *lengths;
     size_t len;
-    size_t line;
+    size_t linecount;
+    size_t longest;
+    char *ch = s;
+
+    linecount = 0;
+    while (*ch != '\0') {
+        if (*ch == '\n')
+            linecount++;
+        ch++;
+    }
+
+    lengths = calloc(linecount + 1, sizeof(*lengths));
+    if (!lengths) {
+        return ULONG_MAX;
+    }
 
     len = 0;
-    line = 0;
-    for (size_t i = 0; i < strlen(s); i++) {
+    for (size_t i = 0, line = 0; i < strlen(s); i++) {
         if (s[i] == '\n') {
             lengths[line] = len;
             line++;
@@ -65,14 +79,13 @@ size_t get_longest_line(char *s) {
         len++;
     }
 
-    size_t longest;
-
     longest = lengths[0];
-    for (size_t i = 0; i < sizeof(lengths) / sizeof(*lengths); i++) {
+    for (size_t i = 0; i < linecount; i++) {
         if (lengths[i] > longest) {
             longest = lengths[i];
         }
     }
+    free(lengths);
     return longest;
 }
 
@@ -284,16 +297,20 @@ int driver_register(struct Driver *driver) {
 
         for (size_t i = drivers_used; i < drivers_alloc; i++) {
             drivers[i] = calloc(1, sizeof(*drivers[i]));
+            if (!drivers[i])
+                return -2;
         }
     }
 
-    drivers[drivers_used] = calloc(1, sizeof(*driver));
-    memcpy(drivers[drivers_used], driver, sizeof(*driver));
+    drivers[drivers_used] = calloc(1, sizeof(*drivers[0]));
+    if (!drivers[drivers_used])
+        return -2;
+    memcpy(drivers[drivers_used], driver, sizeof(*drivers[0]));
     drivers_used++;
     return 0;
 }
 
-void drivers_free(struct Driver **list) {
+void drivers_free() {
     for (size_t i = 0; i < drivers_alloc; i++) {
         if (drivers[i]) {
             if (drivers[i]->name)
@@ -470,7 +487,7 @@ int main(int argc, char *argv[]) {
 
     driver_run(driver, input);
     puts("");
-    drivers_free(drivers);
+    drivers_free();
     free(driver_dir);
     return 0;
 }

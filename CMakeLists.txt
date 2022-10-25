@@ -11,7 +11,7 @@ else()
 endif()
 
 add_executable(sayeth main.c driver.c draw.c)
-set(DRIVER_DIR ${CMAKE_INSTALL_PREFIX}/share/${CMAKE_PROJECT_NAME})
+set(DRIVER_DIR ${CMAKE_INSTALL_PREFIX}/share/${CMAKE_PROJECT_NAME}/drivers)
 
 option(DEV_ENABLE "Developer mode" OFF)
 if(DEV_ENABLE)

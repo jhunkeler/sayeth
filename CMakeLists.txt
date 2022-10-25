@@ -1,9 +1,16 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.17)
 project(sayeth C)
 
 set(CMAKE_C_STANDARD 99)
+if (MSVC)
+    # warning level 4 and all warnings as errors
+    add_compile_options(/W4 /WX)
+else()
+    # lots of warnings and all warnings as errors
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
 
-add_executable(sayeth main.c)
+add_executable(sayeth main.c driver.c draw.c)
 set(DRIVER_DIR ${CMAKE_INSTALL_PREFIX}/share/${CMAKE_PROJECT_NAME})
 
 option(DEV_ENABLE "Developer mode" OFF)

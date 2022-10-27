@@ -5,9 +5,12 @@
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
+#include <wchar.h>
+#include <locale.h>
 #include "config.h"
 #include "sayeth.h"
 
+int do_fill = 1;
 extern char wspace;
 extern struct Driver **drivers;
 extern size_t drivers_alloc;
@@ -18,9 +21,9 @@ extern size_t drivers_used;
  * @param ch character to repeat
  * @param limit number of times to repeat
  */
-void repchar(char ch, size_t limit) {
+void repchar(wchar_t ch, size_t limit) {
     while (limit > 0) {
-        putc(ch, stdout);
+        putwc(ch, stdout);
         limit--;
     }
 }
@@ -30,34 +33,30 @@ void repchar(char ch, size_t limit) {
  * @param s the string
  * @return longest line
  */
-size_t get_longest_line(char *s) {
+size_t get_longest_line(wchar_t *s) {
     size_t *lengths;
-    size_t len;
-    size_t linecount;
+    size_t linecount = 0;
     size_t longest;
-    char *ch = s;
+    wchar_t *ch = s;
+    wchar_t *buf = wcsdup(s);
 
-    linecount = 0;
-    while (*ch != '\0') {
-        if (*ch == '\n')
-            linecount++;
-        ch++;
-    }
+    wchar_t *token = NULL;
+    wchar_t *ptr;
+    token = wcstok(buf, L"\n", &ptr);
+    if (token) linecount++;
+    for (; (token = wcstok(NULL, L"\n", &ptr)) != NULL; linecount++);
+    wcscpy(buf, s);
 
     lengths = calloc(linecount + 1, sizeof(*lengths));
     if (!lengths) {
         return ULONG_MAX;
     }
 
-    len = 0;
-    for (size_t i = 0, line = 0; i < strlen(s); i++) {
-        if (s[i] == '\n') {
-            lengths[line] = len;
-            line++;
-            len = 0;
-            continue;
-        }
-        len++;
+    token = wcstok(buf, L"\n", &ptr);
+    for (size_t i = 0; token != NULL; i++) {
+        size_t len = wcslen(token);
+        lengths[i] = len;
+        token = wcstok(NULL, L"\n", &ptr);
     }
 
     longest = lengths[0];
@@ -67,6 +66,7 @@ size_t get_longest_line(char *s) {
         }
     }
     free(lengths);
+    free(buf);
     return longest;
 }
 
@@ -82,8 +82,9 @@ void usage(char *prog) {
 }
 
 int main(int argc, char *argv[]) {
-    char driver_name[255] = {0};
-    char input[INPUT_BUFSIZ] = {0};
+    setlocale(LC_ALL, "");
+    char *driver_name = calloc(255, sizeof(*driver_name));
+    char *input = calloc(INPUT_BUFSIZ, sizeof(*input));
     struct Driver *driver = NULL;
     char *driver_dir = getenv("SAYETH_DRIVERS");
     if (!driver_dir) {
@@ -176,14 +177,24 @@ int main(int argc, char *argv[]) {
         input[strlen(input)] = '\n';
     }
 
-    driver = driver_lookup(driver_name);
+    size_t reqsize = 0;
+    wchar_t wdriver_name[INPUT_BUFSIZ] = {0};
+    wchar_t winput[INPUT_BUFSIZ] = {0};
+    mbstate_t mbs;
+    memset(&mbs, 0, sizeof(mbs));
+    mbsrtowcs(wdriver_name, &driver_name, 255 - 1, &mbs);
+    mbsrtowcs(winput, &input, INPUT_BUFSIZ - 1, &mbs);
+    //reqsize = wcstombs(input, NULL, 0);
+    //wcstombs(input, winput, reqsize);
+
+    driver = driver_lookup(wdriver_name);
     if (!driver) {
         fprintf(stderr, "Driver not found\n");
         exit(1);
     }
 
-    driver_run(driver, input);
-    puts("");
+    driver_run(driver, winput);
+    wprintf(L"\n");
     drivers_free();
     free(driver_dir);
     return 0;

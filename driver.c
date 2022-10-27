@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include "sayeth.h"
 
+extern int do_fill;
 extern size_t START_Y_BOX;
 extern size_t START_Y_CARET;
 extern size_t START_Y_DATA;
@@ -35,52 +37,52 @@ struct Driver *driver_load(char *filename) {
     }
 
     for (size_t i = 0; i < 9; i++) {
-        char buf[INPUT_BUFSIZ] = {0};
+        wchar_t buf[INPUT_BUFSIZ] = {0};
         ssize_t lastpos = ftell(fp);
-        if (fgets(buf, sizeof(buf) - 1, fp) == NULL) {
+        if (fgetws(buf, sizeof(buf) - 1, fp) == NULL) {
             break;
         }
-        if (!strlen(buf) || buf[0] == '#') {
+        if (!wcslen(buf) || buf[0] == '#') {
             i--;
             continue;
         }
-        buf[strlen(buf) - 1] = '\0';
+        buf[wcslen(buf) - 1] = '\0';
         switch (i) {
             case 0:
-                driver->name = strdup(buf);
+                driver->name = wcsdup(buf);
                 if (!driver->name) {
                     fclose(fp);
                     return NULL;
                 }
                 break;
             case 1:
-                driver->box_indent = strtol(buf, NULL, 10);
+                driver->box_indent = wcstol(buf, NULL, 10);
                 break;
             case 2:
-                driver->box_elements = strdup(buf);
+                driver->box_elements = wcsdup(buf);
                 if (!driver->box_elements) {
                     fclose(fp);
                     return NULL;
                 }
                 break;
             case 3:
-                driver->caret_pos = strtol(buf, NULL, 10);
+                driver->caret_pos = wcstol(buf, NULL, 10);
                 break;
             case 4:
-                driver->caret_indent = strtol(buf, NULL, 10);
+                driver->caret_indent = wcstol(buf, NULL, 10);
                 break;
             case 5:
-                driver->caret_attached = strtol(buf, NULL, 10);
+                driver->caret_attached = wcstol(buf, NULL, 10);
                 break;
             case 6:
-                driver->caret = strdup(buf);
+                driver->caret = wcsdup(buf);
                 if (!driver->caret) {
                     fclose(fp);
                     return NULL;
                 }
                 break;
             case 7:
-                driver->data_indent = strtol(buf, 0, 10);
+                driver->data_indent = wcstol(buf, 0, 10);
                 break;
             case 8:
                 driver->data = calloc(DATA_BUFSIZ, sizeof(*driver->data));
@@ -88,9 +90,12 @@ struct Driver *driver_load(char *filename) {
                     fclose(fp);
                     return NULL;
                 }
-                // rewind to beginning of the data section
                 fseek(fp, lastpos, SEEK_SET);
-                fread(driver->data, 1, DATA_BUFSIZ - 1, fp);
+                wint_t c = 0;
+                size_t n = 0;
+                while ((c = fgetwc(fp)) != WEOF) {
+                    driver->data[n++] = (wchar_t) c;
+                }
                 break;
             default:
                 break;
@@ -129,7 +134,7 @@ int driver_register(struct Driver *driver) {
     return 0;
 }
 
-void drivers_free() {
+void drivers_free(void) {
     for (size_t i = 0; i < drivers_alloc; i++) {
         if (drivers[i]) {
             if (drivers[i]->name)
@@ -145,8 +150,8 @@ void drivers_free() {
     }
     free(drivers);
 }
-void driver_run(struct Driver *driver, char *input) {
-    char *elem = driver->box_elements;
+void driver_run(struct Driver *driver, wchar_t *input) {
+    wchar_t *elem = driver->box_elements;
     box_top_left = elem[0];
     box_top = elem[1];
     box_top_right = elem[2];
@@ -159,7 +164,7 @@ void driver_run(struct Driver *driver, char *input) {
     START_Y_DATA = driver->data_indent;
 
     if (!driver->caret_pos) {
-        box_printf("%s", input);
+        box_printf(L"%S", input);
         caret_draw(driver->caret, START_Y_CARET, driver->caret_attached);
     }
 
@@ -169,13 +174,13 @@ void driver_run(struct Driver *driver, char *input) {
 
     if (driver->caret_pos) {
         caret_draw(driver->caret, START_Y_CARET, driver->caret_attached);
-        box_printf("%s", input);
+        box_printf(L"%S", input);
     }
 }
 
-struct Driver *driver_lookup(char *name) {
+struct Driver *driver_lookup(wchar_t *name) {
     for (size_t i = 0; drivers[i] != NULL; i++) {
-        if (!strcmp(drivers[i]->name, name)) {
+        if (!wcscmp(drivers[i]->name, name)) {
             return drivers[i];
         }
     }
